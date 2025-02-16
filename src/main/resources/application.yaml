@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    url: jdbc:sqlserver://localhost:1433;databaseName=mydb;encrypt=false;trustServerCertificate=true
+    username: sa
+    password: YourStrong!Passw0rd
+    
