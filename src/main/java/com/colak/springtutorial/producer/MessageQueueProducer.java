@@ -1,8 +1,8 @@
 package com.colak.springtutorial.producer;
 
 import com.colak.springtutorial.pojo.BrokerMessage;
+import com.colak.springtutorial.pojo.BrokerMessageStatus;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 
@@ -14,15 +14,15 @@ public class MessageQueueProducer {
 
     // Insert a brokerMessage into the MessageQueue
     public void produceMessage(BrokerMessage brokerMessage) {
-        String insertQuery = "INSERT INTO MessageQueue (brokerMessage, status, created_at) VALUES (:brokerMessage, 'PENDING', GETDATE())";
+        String insertQuery = "INSERT INTO MessageQueue (message, status, created_at) VALUES (:brokerMessage, :sts, GETDATE())";
 
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("brokerMessage", brokerMessage.getMessageContent());
 
         // Execute insert query using JdbcClient
         jdbcClient
                 .sql(insertQuery)
-                .params(params)
+                .param("brokerMessage", brokerMessage.getMessageContent())
+                .param("sts", BrokerMessageStatus.PENDING.name())
+
                 .update();
 
         System.out.println("BrokerMessage produced: " + brokerMessage.getMessageContent());

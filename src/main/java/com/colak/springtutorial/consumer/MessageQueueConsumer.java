@@ -1,11 +1,10 @@
 package com.colak.springtutorial.consumer;
 
 import com.colak.springtutorial.pojo.BrokerMessage;
+import com.colak.springtutorial.pojo.BrokerMessageStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -25,10 +24,7 @@ public class MessageQueueConsumer {
     // Process 10 messages at a time
     private static final int BATCH_SIZE = 10;
 
-    // Poll every 10 seconds for unprocessed messages
-    @Scheduled(fixedRate = 10_000)
     public void consumeMessages() {
-
         transactionTemplate.execute(_ -> {
             List<BrokerMessage> brokerMessages = fetchMessages();
             processAndUpdateMessages(brokerMessages);
@@ -41,17 +37,18 @@ public class MessageQueueConsumer {
         // Order by id to process in insertion order
         String selectQuery = """
                 SELECT TOP %d * FROM MessageQueue WITH (UPDLOCK)\s
-                WHERE status = 'PENDING'\s
+                WHERE status = :sts\s
                 ORDER BY id ASC"""
                 .formatted(BATCH_SIZE);
 
         return jdbcClient
                 .sql(selectQuery)
+                .param("sts", BrokerMessageStatus.PENDING.name())
                 .query((rs, rowNum) -> {
                     BrokerMessage brokerMessage = new BrokerMessage();
                     brokerMessage.setId(rs.getInt("id"));
-                    brokerMessage.setMessageContent(rs.getString("brokerMessage"));
-                    brokerMessage.setStatus(rs.getString("status"));
+                    brokerMessage.setMessageContent(rs.getString("message"));
+                    brokerMessage.setStatus(BrokerMessageStatus.valueOf(rs.getString("status")));
 
                     // Convert from Timestamp to LocalDateTime
                     brokerMessage.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
@@ -93,13 +90,11 @@ public class MessageQueueConsumer {
     private void updateMessages(List<Long> messageIds) {
         // Update their status to PROCESSED
         // Create the parameterized update query with IN clause
-        String updateQuery = "UPDATE MessageQueue SET status = 'PROCESSED', processed_at = GETDATE() WHERE id IN (:ids)";
-        // Perform the update in a single batch using the list of IDs
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("ids", messageIds);
+        String updateQuery = "UPDATE MessageQueue SET status = :sts, processed_at = GETDATE() WHERE id IN (:ids)";
 
         jdbcClient.sql(updateQuery)
-                .param(params)
+                .param("sts", BrokerMessageStatus.PROCESSED.name())
+                .param("ids", messageIds)
                 .update();
     }
 }
