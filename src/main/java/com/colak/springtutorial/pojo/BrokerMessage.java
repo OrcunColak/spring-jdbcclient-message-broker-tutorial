@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Setter
 @Getter
 public class BrokerMessage {
-    private int id;
+    private long id;
     private String messageContent;
     private String status;
     private LocalDateTime createdAt;

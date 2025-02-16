@@ -18,6 +18,6 @@ CREATE TABLE MessageQueue (
     id INT IDENTITY(1,1) PRIMARY KEY,
     message NVARCHAR(MAX),
     status NVARCHAR(50) NOT NULL DEFAULT 'PENDING',  -- 'PENDING', 'PROCESSED'
-    created_at DATETIME NOT NULL,  -- Using DATETIME, not DATETIME2
-    processed_at DATETIME NULL
+    created_at DATETIME2 NOT NULL,
+    processed_at DATETIME2 NULL
 );
